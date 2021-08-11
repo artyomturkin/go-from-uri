@@ -1,4 +1,4 @@
-package fromurl
+package fromuri
 
 import "fmt"
 

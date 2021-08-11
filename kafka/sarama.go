@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/Shopify/sarama"
-	fromurl "github.com/artyomturkin/go-from-uri"
+	fromuri "github.com/artyomturkin/go-from-uri"
 )
 
 // NewSaramaConfig build new sarama config from URL string.
@@ -23,7 +23,7 @@ func NewSaramaConfig(connectionURL string) ([]string, *sarama.Config, error) {
 	case "kafkas":
 		conf.Net.TLS.Enable = true
 	default:
-		return nil, nil, fromurl.ErrUnsupportedScheme
+		return nil, nil, fromuri.ErrUnsupportedScheme
 	}
 
 	if pass, set := u.User.Password(); set {
