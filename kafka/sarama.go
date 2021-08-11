@@ -36,7 +36,6 @@ func NewSaramaConfig(connectionURL string) ([]string, *sarama.Config, error) {
 	conf.Producer.Return.Successes = true
 	conf.Consumer.Return.Errors = true
 	conf.Producer.RequiredAcks = sarama.WaitForAll
-	conf.Consumer.Offsets.AutoCommit.Enable = false
 
 	switch s := u.Query().Get("offset"); s {
 	case "oldest":
