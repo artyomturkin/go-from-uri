@@ -6,16 +6,11 @@ import (
 	"strings"
 
 	"github.com/Shopify/sarama"
-	fromuri "github.com/artyomturkin/go-from-uri"
+	"github.com/artyomturkin/go-from-uri"
 )
 
 // NewSaramaConfig build new sarama config from URL string.
-func NewSaramaConfig(connectionURL string) ([]string, *sarama.Config, error) {
-	u, err := url.Parse(connectionURL)
-	if err != nil {
-		return nil, nil, err
-	}
-
+func NewSaramaConfig(u *url.URL) ([]string, *sarama.Config, error) {
 	conf := sarama.NewConfig()
 
 	switch u.Scheme {
@@ -31,7 +26,6 @@ func NewSaramaConfig(connectionURL string) ([]string, *sarama.Config, error) {
 		conf.Net.SASL.User = u.User.Username()
 		conf.Net.SASL.Password = pass
 	}
-
 	conf.Producer.Return.Errors = true
 	conf.Producer.Return.Successes = true
 	conf.Consumer.Return.Errors = true
@@ -57,7 +51,11 @@ func NewSaramaConfig(connectionURL string) ([]string, *sarama.Config, error) {
 
 // NewSaramaConfig build new sarama client from URL string.
 func NewSaramaClient(connectionURL string) (sarama.Client, error) {
-	brokers, conf, err := NewSaramaConfig(connectionURL)
+	u, err := url.Parse(connectionURL)
+	if err != nil {
+		return nil, err
+	}
+	brokers, conf, err := NewSaramaConfig(u)
 	if err != nil {
 		return nil, err
 	}
