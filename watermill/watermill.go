@@ -1,7 +1,6 @@
 package watermill
 
 import (
-	"github.com/ThreeDotsLabs/watermill-sql/pkg/sql"
 	"github.com/artyomturkin/go-from-uri/cassandra"
 	kafka2 "github.com/artyomturkin/go-from-uri/kafka"
 	"github.com/artyomturkin/go-from-uri/postgres"
@@ -122,7 +121,7 @@ func NewWatermillSubscriber(connection string, logger watermill.LoggerAdapter) (
 		}
 	case "elastic":
 	default:
-		brokers, conf, err := kafka2.NewSaramaClient(connection)
+		brokers, conf, err := kafka2.NewSaramaConfig(connection)
 		if err != nil {
 			return nil, err
 		}
