@@ -1,10 +1,11 @@
-package kafka
+package watermill
 
 import (
 	"github.com/ThreeDotsLabs/watermill-sql/pkg/sql"
 	"github.com/artyomturkin/go-from-uri/cassandra"
+	kafka2 "github.com/artyomturkin/go-from-uri/kafka"
 	"github.com/artyomturkin/go-from-uri/postgres"
-    "github.com/qairjar/watermill-scylla-plugin"
+	"github.com/qairjar/watermill-scylla-plugin"
 	"net/url"
 
 	"github.com/ThreeDotsLabs/watermill"
@@ -27,13 +28,8 @@ func NewWatermillPublisher(connection string, logger watermill.LoggerAdapter) (m
 		if err != nil {
 			return nil, err
 		}
-		pub, err = sql.NewPublisher(
-			db,
-			sql.PublisherConfig{
-				SchemaAdapter: sql.DefaultMySQLSchema{},
-			},
-			logger,
-		)
+		p := &sqlplugin.Publisher{DB: db}
+		pub, err = p.NewPublisher(nil, logger)
 		if err != nil {
 			return nil, err
 		}
@@ -43,7 +39,7 @@ func NewWatermillPublisher(connection string, logger watermill.LoggerAdapter) (m
 			return nil, err
 		}
 		posPub := sqlplugin.Publisher{DB: db}
-		pub,err = posPub.NewPublisher(nil, logger)
+		pub, err = posPub.NewPublisher(nil, logger)
 		if err != nil {
 			return nil, err
 		}
@@ -52,17 +48,21 @@ func NewWatermillPublisher(connection string, logger watermill.LoggerAdapter) (m
 		if err != nil {
 			return nil, err
 		}
-		pub = &scyllaplugin.Publisher{
+		p := &scyllaplugin.Publisher{
 			DB: db,
+		}
+		pub, err = p.NewPublisher(nil, logger)
+		if err != nil {
+			return nil, err
 		}
 	case "elastic":
 		elasticPub := &elasticplugin.Publisher{ElasticURL: u.Host}
-		pub,err  = elasticPub.NewPublisher(nil, logger)
+		pub, err = elasticPub.NewPublisher(nil, logger)
 		if err != nil {
 			return nil, err
 		}
 	default:
-		brokers, conf, err := SetSaramaConfig(u)
+		brokers, conf, err := kafka2.NewSaramaConfig(connection)
 		if err != nil {
 			return nil, err
 		}
@@ -98,7 +98,6 @@ func NewWatermillSubscriber(connection string, logger watermill.LoggerAdapter) (
 		if err != nil {
 			return nil, err
 		}
-
 	case "postgres":
 		db, err := postgres.SetConf(u)
 		if err != nil {
@@ -114,12 +113,16 @@ func NewWatermillSubscriber(connection string, logger watermill.LoggerAdapter) (
 		if err != nil {
 			return nil, err
 		}
-		c = &scyllaplugin.Subscriber{
+		sub := &scyllaplugin.Subscriber{
 			DB: db,
+		}
+		c, err = sub.NewSubscriber(nil, logger)
+		if err != nil {
+			return nil, err
 		}
 	case "elastic":
 	default:
-		brokers, conf, err := SetSaramaConfig(u)
+		brokers, conf, err := kafka2.NewSaramaClient(connection)
 		if err != nil {
 			return nil, err
 		}
