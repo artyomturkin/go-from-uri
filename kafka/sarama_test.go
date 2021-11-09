@@ -1,7 +1,6 @@
 package kafka_test
 
 import (
-	"net/url"
 	"testing"
 
 	"github.com/Shopify/sarama"
@@ -12,8 +11,7 @@ import (
 func TestNewSaramaConfigSuccessSimple(t *testing.T) {
 	connection := "kafka://broker01:9092,broker02:9092"
 
-	u, _ := url.Parse(connection)
-	brokers, conf, err := kafka.NewSaramaConfig(u)
+	brokers, conf, err := kafka.NewSaramaConfig(connection)
 
 	assert.NoError(t, err)
 	assert.ElementsMatch(t, []string{"broker01:9092", "broker02:9092"}, brokers)
@@ -22,16 +20,13 @@ func TestNewSaramaConfigSuccessSimple(t *testing.T) {
 
 func TestNewSaramaConfigWrongScheme(t *testing.T) {
 	connection := "kafkad://broker01:9092,broker02:9092"
-
-	u, _ := url.Parse(connection)
-	_, _, err := kafka.NewSaramaConfig(u)
+	_, _, err := kafka.NewSaramaConfig(connection)
 	assert.Error(t, err)
 }
 
 func TestNewSaramaConfigBrokenURL(t *testing.T) {
 	connection := "kafka//broker01:9092,broker02:9092\\"
-	u, _:= url.Parse(connection)
-	_, _, err := kafka.NewSaramaConfig(u)
+	_, _, err := kafka.NewSaramaConfig(connection)
 
 	assert.Error(t, err)
 }
@@ -39,8 +34,7 @@ func TestNewSaramaConfigBrokenURL(t *testing.T) {
 func TestNewSaramaConfigSuccessTLSAndSASL(t *testing.T) {
 	connection := "kafkas://user:pass@broker01:9092,broker02:9092"
 
-	u, _ := url.Parse(connection)
-	brokers, conf, err := kafka.NewSaramaConfig(u)
+	brokers, conf, err := kafka.NewSaramaConfig(connection)
 
 	assert.NoError(t, err)
 	assert.ElementsMatch(t, []string{"broker01:9092", "broker02:9092"}, brokers)
@@ -72,8 +66,7 @@ func TestNewSaramaClientFail(t *testing.T) {
 
 func TestNewSaramaConfigWithNewestOffset(t *testing.T) {
 	connection := "kafkas://user:pass@broker01:9092,broker02:9092?offset=newest"
-	u, _ := url.Parse(connection)
-	_, conf, err := kafka.NewSaramaConfig(u)
+	_, conf, err := kafka.NewSaramaConfig(connection)
 
 	assert.NoError(t, err)
 	assert.Equal(t, sarama.OffsetNewest, conf.Consumer.Offsets.Initial)
@@ -81,8 +74,8 @@ func TestNewSaramaConfigWithNewestOffset(t *testing.T) {
 
 func TestNewSaramaConfigWithOldestOffset(t *testing.T) {
 	connection := "kafkas://user:pass@broker01:9092,broker02:9092?offset=oldest"
-	u, _ := url.Parse(connection)
-	_, conf, err := kafka.NewSaramaConfig(u)
+
+	_, conf, err := kafka.NewSaramaConfig(connection)
 
 	assert.NoError(t, err)
 	assert.Equal(t, sarama.OffsetOldest, conf.Consumer.Offsets.Initial)
@@ -91,8 +84,7 @@ func TestNewSaramaConfigWithOldestOffset(t *testing.T) {
 func TestNewSaramaConfigWithCustomOffset(t *testing.T) {
 	connection := "kafkas://user:pass@broker01:9092,broker02:9092?offset=123"
 
-	u, _ := url.Parse(connection)
-	_, conf, err := kafka.NewSaramaConfig(u)
+	_, conf, err := kafka.NewSaramaConfig(connection)
 
 	assert.NoError(t, err)
 	assert.Equal(t, int64(123), conf.Consumer.Offsets.Initial)
@@ -101,8 +93,7 @@ func TestNewSaramaConfigWithCustomOffset(t *testing.T) {
 func TestNewSaramaConfigWithCustomOffsetFail(t *testing.T) {
 	connection := "kafkas://user:pass@broker01:9092,broker02:9092?offset=123a"
 
-	u, _ := url.Parse(connection)
-	_, _, err := kafka.NewSaramaConfig(u)
+	_, _, err := kafka.NewSaramaConfig(connection)
 
 	assert.Error(t, err)
 }

@@ -11,15 +11,56 @@ import (
 func NewScyllaConfig(u *url.URL) (*sql.DB, error) {
 	scyllaConf := scyllaplugin.SQLConfig{}
 
+	keyspace := "test"
+	dbType := "cql"
+	consistency := "one"
+	enableAuth := false
+	timeoutValid := time.Minute * 10
+	connectTimeout := time.Minute * 10
+
 	scyllaConf.Host = u.Host
-	scyllaConf.Keyspace = u.Query().Get("keyspace")
-	scyllaConf.User = u.User.Username()
-	scyllaConf.Type = u.Query().Get("type")
-	scyllaConf.Consistency = u.Query().Get("consistency")
-	scyllaConf.EnableAuth, _ = strconv.ParseBool(u.Query().Get("enableAuth"))
-	scyllaConf.Pass, _ = u.User.Password()
-	scyllaConf.TimeoutValid, _ = time.ParseDuration(u.Query().Get("timeoutValid"))
-	scyllaConf.ConnectTimeout, _ = time.ParseDuration(u.Query().Get("connectTimeout"))
+	query := u.Query()
+	if query.Get("keyspace") != "" {
+		keyspace = query.Get("keyspace")
+	}
+
+	if query.Get("type") != "" {
+		dbType = query.Get("type")
+	}
+
+	if query.Get("consistency") != "" {
+		dbType = query.Get("consistency")
+	}
+	var err error
+	if query.Get("enableAuth") == "true" {
+		enableAuth, err = strconv.ParseBool(query.Get("enableAuth"))
+		if err != nil {
+			return nil, err
+		}
+
+		scyllaConf.User = u.User.Username()
+		scyllaConf.Pass, _ = u.User.Password()
+	}
+
+	if u.Query().Get("timeoutValid") != "" {
+		timeoutValid, err = time.ParseDuration(u.Query().Get("timeoutValid"))
+		if err != nil {
+			return nil, err
+		}
+	}
+	if u.Query().Get("connectTimeout") != "" {
+		connectTimeout, err = time.ParseDuration(u.Query().Get("timeoutValid"))
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	scyllaConf.Type = dbType
+	scyllaConf.Keyspace = keyspace
+	scyllaConf.Consistency = consistency
+	scyllaConf.EnableAuth = enableAuth
+	scyllaConf.TimeoutValid = timeoutValid
+	scyllaConf.ConnectTimeout = connectTimeout
 
 	return scyllaConf.CreateDB()
 }

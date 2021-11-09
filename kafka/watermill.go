@@ -62,7 +62,7 @@ func NewWatermillPublisher(connection string, logger watermill.LoggerAdapter) (m
 			return nil, err
 		}
 	default:
-		brokers, conf, err := NewSaramaConfig(u)
+		brokers, conf, err := SetSaramaConfig(u)
 		if err != nil {
 			return nil, err
 		}
@@ -119,7 +119,7 @@ func NewWatermillSubscriber(connection string, logger watermill.LoggerAdapter) (
 		}
 	case "elastic":
 	default:
-		brokers, conf, err := NewSaramaConfig(u)
+		brokers, conf, err := SetSaramaConfig(u)
 		if err != nil {
 			return nil, err
 		}
