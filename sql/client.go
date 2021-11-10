@@ -9,6 +9,7 @@ import (
 var driverMap map[string]string
 
 func init(){
+	driverMap = make(map[string]string)
 	driverMap["mysql"] = "sql"
 	driverMap["oracle"] = "godror"
 	driverMap["postgres"] = "postgres"
