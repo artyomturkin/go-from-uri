@@ -4,7 +4,7 @@ import (
 	fromuri "github.com/artyomturkin/go-from-uri"
 	"github.com/artyomturkin/go-from-uri/cassandra"
 	kafka2 "github.com/artyomturkin/go-from-uri/kafka"
-	"github.com/artyomturkin/go-from-uri/postgres"
+	"github.com/artyomturkin/go-from-uri/sql"
 	"github.com/qairjar/watermill-scylla-plugin"
 	"net/url"
 
@@ -23,38 +23,18 @@ func NewWatermillPublisher(connection string, logger watermill.LoggerAdapter) (m
 	}
 	var pub message.Publisher
 	switch u.Scheme {
-	case "mysql":
-		db, err := postgres.SetConf(u)
+	case "mysql", "oracle", "postgres":
+		db, err := sql.SetConf(connection)
 		if err != nil {
 			return nil, err
 		}
 		p := &sqlplugin.Publisher{DB: db}
 		pub, err = p.NewPublisher(nil, logger)
-		if err != nil {
-			return nil, err
-		}
-	case "oracle":
-		db, err := postgres.SetConf(u)
-		if err != nil {
-			return nil, err
-		}
-		p := &sqlplugin.Publisher{DB: db}
-		pub, err = p.NewPublisher(nil, logger)
-		if err != nil {
-			return nil, err
-		}
-	case "postgres":
-		db, err := postgres.SetConf(u)
-		if err != nil {
-			return nil, err
-		}
-		posPub := sqlplugin.Publisher{DB: db}
-		pub, err = posPub.NewPublisher(nil, logger)
 		if err != nil {
 			return nil, err
 		}
 	case "scylla":
-		db, err := cassandra.NewScyllaConfig(u)
+		db, err := cassandra.NewScyllaConfig(connection)
 		if err != nil {
 			return nil, err
 		}
@@ -66,12 +46,12 @@ func NewWatermillPublisher(connection string, logger watermill.LoggerAdapter) (m
 			return nil, err
 		}
 	case "elastic":
-		elasticPub := &elasticplugin.Publisher{ElasticURL: u.Host}
+		elasticPub := &elasticplugin.Publisher{ElasticURL: connection}
 		pub, err = elasticPub.NewPublisher(nil, logger)
 		if err != nil {
 			return nil, err
 		}
-	case "kafka", "":
+	case "kafka", "kafkas":
 		brokers, conf, err := kafka2.NewSaramaConfig(connection)
 		if err != nil {
 			return nil, err
@@ -84,20 +64,6 @@ func NewWatermillPublisher(connection string, logger watermill.LoggerAdapter) (m
 			},
 			logger,
 		)
-	case "kafkas":
-		brokers, conf, err := kafka2.NewSaramaConfig(connection)
-		if err != nil {
-			return nil, err
-		}
-		pub, err = kafka.NewPublisher(
-			kafka.PublisherConfig{
-				Brokers:               brokers,
-				OverwriteSaramaConfig: conf,
-				Marshaler:             kafka.DefaultMarshaler{},
-			},
-			logger,
-		)
-
 	default:
 		return nil, fromuri.ErrUnsupportedScheme
 	}
@@ -114,28 +80,8 @@ func NewWatermillSubscriber(connection string, logger watermill.LoggerAdapter) (
 
 	var c message.Subscriber
 	switch u.Scheme {
-	case "mysql":
-		db, err := postgres.SetConf(u)
-		if err != nil {
-			return nil, err
-		}
-		sub := sqlplugin.Subscriber{DB: db}
-		c, err = sub.NewSubscriber(nil, logger)
-		if err != nil {
-			return nil, err
-		}
-	case "oracle":
-		db, err := postgres.SetConf(u)
-		if err != nil {
-			return nil, err
-		}
-		sub := sqlplugin.Subscriber{DB: db}
-		c, err = sub.NewSubscriber(nil, logger)
-		if err != nil {
-			return nil, err
-		}
-	case "postgres":
-		db, err := postgres.SetConf(u)
+	case "mysql", "oracle", "postgres":
+		db, err := sql.SetConf(connection)
 		if err != nil {
 			return nil, err
 		}
@@ -145,7 +91,7 @@ func NewWatermillSubscriber(connection string, logger watermill.LoggerAdapter) (
 			return nil, err
 		}
 	case "scylla":
-		db, err := cassandra.NewScyllaConfig(u)
+		db, err := cassandra.NewScyllaConfig(connection)
 		if err != nil {
 			return nil, err
 		}
@@ -157,7 +103,7 @@ func NewWatermillSubscriber(connection string, logger watermill.LoggerAdapter) (
 			return nil, err
 		}
 	case "elastic":
-	case "kafka":
+	case "kafka", "kafkas":
 		brokers, conf, err := kafka2.NewSaramaConfig(connection)
 		if err != nil {
 			return nil, err
@@ -167,25 +113,6 @@ func NewWatermillSubscriber(connection string, logger watermill.LoggerAdapter) (
 			OverwriteSaramaConfig: conf,
 			Unmarshaler:           kafka.DefaultMarshaler{},
 		}
-
-		if cg := u.Query().Get("group"); cg != "" {
-			sc.ConsumerGroup = cg
-		}
-		c, _ = kafka.NewSubscriber(
-			sc,
-			logger,
-		)
-	case "kafkas":
-		brokers, conf, err := kafka2.NewSaramaConfig(connection)
-		if err != nil {
-			return nil, err
-		}
-		sc := kafka.SubscriberConfig{
-			Brokers:               brokers,
-			OverwriteSaramaConfig: conf,
-			Unmarshaler:           kafka.DefaultMarshaler{},
-		}
-
 		if cg := u.Query().Get("group"); cg != "" {
 			sc.ConsumerGroup = cg
 		}

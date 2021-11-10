@@ -2,16 +2,19 @@ package cassandra
 
 import (
 	"database/sql"
+	"errors"
 	"github.com/qairjar/watermill-scylla-plugin"
 	"net/url"
 	"strconv"
 	"time"
 )
 
-func NewScyllaConfig(u *url.URL) (*sql.DB, error) {
+func NewScyllaConfig(connection string) (*sql.DB, error) {
+	u, err := url.Parse(connection)
+	if err != nil {
+		return nil, err
+	}
 	scyllaConf := scyllaplugin.SQLConfig{}
-
-	keyspace := "test"
 	dbType := "cql"
 	consistency := "one"
 	enableAuth := false
@@ -21,7 +24,9 @@ func NewScyllaConfig(u *url.URL) (*sql.DB, error) {
 	scyllaConf.Host = u.Host
 	query := u.Query()
 	if query.Get("keyspace") != "" {
-		keyspace = query.Get("keyspace")
+		scyllaConf.Keyspace = query.Get("keyspace")
+	} else {
+		return nil, errors.New(`keyspace is undefined`)
 	}
 
 	if query.Get("type") != "" {
@@ -31,7 +36,6 @@ func NewScyllaConfig(u *url.URL) (*sql.DB, error) {
 	if query.Get("consistency") != "" {
 		dbType = query.Get("consistency")
 	}
-	var err error
 	if query.Get("enableAuth") == "true" {
 		enableAuth, err = strconv.ParseBool(query.Get("enableAuth"))
 		if err != nil {
@@ -56,7 +60,6 @@ func NewScyllaConfig(u *url.URL) (*sql.DB, error) {
 	}
 
 	scyllaConf.Type = dbType
-	scyllaConf.Keyspace = keyspace
 	scyllaConf.Consistency = consistency
 	scyllaConf.EnableAuth = enableAuth
 	scyllaConf.TimeoutValid = timeoutValid
