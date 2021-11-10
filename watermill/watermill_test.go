@@ -1,7 +1,7 @@
-package kafka_test
+package watermill_test
 
 import (
-	"github.com/artyomturkin/go-from-uri/kafka"
+	"github.com/artyomturkin/go-from-uri/watermill"
 	"testing"
 
 	"github.com/Shopify/sarama"
@@ -11,7 +11,7 @@ import (
 func TestWatermillPublisherNoBrokers(t *testing.T) {
 	url := "kafka://broker01:9092,broker02:9092"
 
-	_, err := kafka.NewWatermillPublisher(url, nil)
+	_, err := watermill.NewPublisher(url, nil)
 
 	assert.Contains(t, err.Error(), sarama.ErrOutOfBrokers.Error())
 }
@@ -19,7 +19,7 @@ func TestWatermillPublisherNoBrokers(t *testing.T) {
 func TestWatermillPublisherBrokenURL(t *testing.T) {
 	url := "kafka://broker01:9092,broker02:9092\\"
 
-	_, err := kafka.NewWatermillPublisher(url, nil)
+	_, err := watermill.NewPublisher(url, nil)
 
 	assert.Error(t, err)
 }
@@ -27,7 +27,7 @@ func TestWatermillPublisherBrokenURL(t *testing.T) {
 func TestWatermillSubscriberNoBrokers(t *testing.T) {
 	url := "kafka://broker01:9092,broker02:9092?group=hello&offset=newest"
 
-	sub, err := kafka.NewWatermillSubscriber(url, nil)
+	sub, err := watermill.NewSubscriber(url, nil)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, sub)
@@ -36,7 +36,7 @@ func TestWatermillSubscriberNoBrokers(t *testing.T) {
 func TestWatermillSubscriberBrokenURL(t *testing.T) {
 	url := "kafka://broker01:9092,broker02:9092\\"
 
-	_, err := kafka.NewWatermillSubscriber(url, nil)
+	_, err := watermill.NewSubscriber(url, nil)
 
 	assert.Error(t, err)
 }

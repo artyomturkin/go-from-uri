@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/Shopify/sarama"
-	fromuri "github.com/artyomturkin/go-from-uri"
+	"github.com/artyomturkin/go-from-uri"
 )
 
 // NewSaramaConfig build new sarama config from URL string.

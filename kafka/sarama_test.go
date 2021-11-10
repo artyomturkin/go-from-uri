@@ -9,9 +9,9 @@ import (
 )
 
 func TestNewSaramaConfigSuccessSimple(t *testing.T) {
-	url := "kafka://broker01:9092,broker02:9092"
+	connection := "kafka://broker01:9092,broker02:9092"
 
-	brokers, conf, err := kafka.NewSaramaConfig(url)
+	brokers, conf, err := kafka.NewSaramaConfig(connection)
 
 	assert.NoError(t, err)
 	assert.ElementsMatch(t, []string{"broker01:9092", "broker02:9092"}, brokers)
@@ -19,25 +19,22 @@ func TestNewSaramaConfigSuccessSimple(t *testing.T) {
 }
 
 func TestNewSaramaConfigWrongScheme(t *testing.T) {
-	url := "kafkad://broker01:9092,broker02:9092"
-
-	_, _, err := kafka.NewSaramaConfig(url)
-
+	connection := "kafkad://broker01:9092,broker02:9092"
+	_, _, err := kafka.NewSaramaConfig(connection)
 	assert.Error(t, err)
 }
 
 func TestNewSaramaConfigBrokenURL(t *testing.T) {
-	url := "kafka//broker01:9092,broker02:9092\\"
-
-	_, _, err := kafka.NewSaramaConfig(url)
+	connection := "kafka//broker01:9092,broker02:9092\\"
+	_, _, err := kafka.NewSaramaConfig(connection)
 
 	assert.Error(t, err)
 }
 
 func TestNewSaramaConfigSuccessTLSAndSASL(t *testing.T) {
-	url := "kafkas://user:pass@broker01:9092,broker02:9092"
+	connection := "kafkas://user:pass@broker01:9092,broker02:9092"
 
-	brokers, conf, err := kafka.NewSaramaConfig(url)
+	brokers, conf, err := kafka.NewSaramaConfig(connection)
 
 	assert.NoError(t, err)
 	assert.ElementsMatch(t, []string{"broker01:9092", "broker02:9092"}, brokers)
@@ -53,52 +50,50 @@ func TestNewSaramaConfigSuccessTLSAndSASL(t *testing.T) {
 }
 
 func TestNewSaramaClientErrNoBrokersToConnect(t *testing.T) {
-	url := "kafkas://user:pass@broker01:9092,broker02:9092"
+	connection := "kafkas://user:pass@broker01:9092,broker02:9092"
 
-	_, err := kafka.NewSaramaClient(url)
+	_, err := kafka.NewSaramaClient(connection)
 
 	assert.ErrorIs(t, err, sarama.ErrOutOfBrokers)
 }
 
 func TestNewSaramaClientFail(t *testing.T) {
-	url := "kafkas://user:pass@broker01:9092,broker02:9092\\"
-
-	_, err := kafka.NewSaramaClient(url)
+	connection := "kafkas://user:pass@broker01:9092,broker02:9092\\"
+	_, err := kafka.NewSaramaClient(connection)
 
 	assert.Error(t, err)
 }
 
 func TestNewSaramaConfigWithNewestOffset(t *testing.T) {
-	url := "kafkas://user:pass@broker01:9092,broker02:9092?offset=newest"
-
-	_, conf, err := kafka.NewSaramaConfig(url)
+	connection := "kafkas://user:pass@broker01:9092,broker02:9092?offset=newest"
+	_, conf, err := kafka.NewSaramaConfig(connection)
 
 	assert.NoError(t, err)
 	assert.Equal(t, sarama.OffsetNewest, conf.Consumer.Offsets.Initial)
 }
 
 func TestNewSaramaConfigWithOldestOffset(t *testing.T) {
-	url := "kafkas://user:pass@broker01:9092,broker02:9092?offset=oldest"
+	connection := "kafkas://user:pass@broker01:9092,broker02:9092?offset=oldest"
 
-	_, conf, err := kafka.NewSaramaConfig(url)
+	_, conf, err := kafka.NewSaramaConfig(connection)
 
 	assert.NoError(t, err)
 	assert.Equal(t, sarama.OffsetOldest, conf.Consumer.Offsets.Initial)
 }
 
 func TestNewSaramaConfigWithCustomOffset(t *testing.T) {
-	url := "kafkas://user:pass@broker01:9092,broker02:9092?offset=123"
+	connection := "kafkas://user:pass@broker01:9092,broker02:9092?offset=123"
 
-	_, conf, err := kafka.NewSaramaConfig(url)
+	_, conf, err := kafka.NewSaramaConfig(connection)
 
 	assert.NoError(t, err)
 	assert.Equal(t, int64(123), conf.Consumer.Offsets.Initial)
 }
 
 func TestNewSaramaConfigWithCustomOffsetFail(t *testing.T) {
-	url := "kafkas://user:pass@broker01:9092,broker02:9092?offset=123a"
+	connection := "kafkas://user:pass@broker01:9092,broker02:9092?offset=123a"
 
-	_, _, err := kafka.NewSaramaConfig(url)
+	_, _, err := kafka.NewSaramaConfig(connection)
 
 	assert.Error(t, err)
 }
