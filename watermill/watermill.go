@@ -9,14 +9,13 @@ import (
 	"net/url"
 
 	"github.com/ThreeDotsLabs/watermill"
-	"github.com/ThreeDotsLabs/watermill-kafka/v2/pkg/kafka"
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/qairjar/watermill-elastic-plugin"
 	"github.com/qairjar/watermill-sql-plugin"
 )
 
-// NewWatermillPublisher build watermill publisher from provided url.
-func NewWatermillPublisher(connection string, logger watermill.LoggerAdapter) (message.Publisher, error) {
+// NewPublisher build watermill publisher from provided url.
+func NewPublisher(connection string, logger watermill.LoggerAdapter) (message.Publisher, error) {
 	u, err := url.Parse(connection)
 	if err != nil {
 		return nil, err
@@ -24,7 +23,7 @@ func NewWatermillPublisher(connection string, logger watermill.LoggerAdapter) (m
 	var pub message.Publisher
 	switch u.Scheme {
 	case "mysql", "oracle", "postgres":
-		db, err := sql.SetConf(connection)
+		db, err := sql.Open(connection)
 		if err != nil {
 			return nil, err
 		}
@@ -52,18 +51,7 @@ func NewWatermillPublisher(connection string, logger watermill.LoggerAdapter) (m
 			return nil, err
 		}
 	case "kafka", "kafkas":
-		brokers, conf, err := kafka2.NewSaramaConfig(connection)
-		if err != nil {
-			return nil, err
-		}
-		pub, err = kafka.NewPublisher(
-			kafka.PublisherConfig{
-				Brokers:               brokers,
-				OverwriteSaramaConfig: conf,
-				Marshaler:             kafka.DefaultMarshaler{},
-			},
-			logger,
-		)
+		pub,err = kafka2.NewWatermillPublisher(connection,logger)
 	default:
 		return nil, fromuri.ErrUnsupportedScheme
 	}
@@ -71,8 +59,8 @@ func NewWatermillPublisher(connection string, logger watermill.LoggerAdapter) (m
 	return pub, err
 }
 
-// NewWatermillSubscriber build watermill subscriber from provided url.
-func NewWatermillSubscriber(connection string, logger watermill.LoggerAdapter) (message.Subscriber, error) {
+// NewSubscriber build watermill subscriber from provided url.
+func NewSubscriber(connection string, logger watermill.LoggerAdapter) (message.Subscriber, error) {
 	u, err := url.Parse(connection)
 	if err != nil {
 		return nil, err
@@ -81,7 +69,7 @@ func NewWatermillSubscriber(connection string, logger watermill.LoggerAdapter) (
 	var c message.Subscriber
 	switch u.Scheme {
 	case "mysql", "oracle", "postgres":
-		db, err := sql.SetConf(connection)
+		db, err := sql.Open(connection)
 		if err != nil {
 			return nil, err
 		}
@@ -104,22 +92,10 @@ func NewWatermillSubscriber(connection string, logger watermill.LoggerAdapter) (
 		}
 	case "elastic":
 	case "kafka", "kafkas":
-		brokers, conf, err := kafka2.NewSaramaConfig(connection)
+		c,err = kafka2.NewWatermillSubscriber(connection, logger)
 		if err != nil {
 			return nil, err
 		}
-		sc := kafka.SubscriberConfig{
-			Brokers:               brokers,
-			OverwriteSaramaConfig: conf,
-			Unmarshaler:           kafka.DefaultMarshaler{},
-		}
-		if cg := u.Query().Get("group"); cg != "" {
-			sc.ConsumerGroup = cg
-		}
-		c, _ = kafka.NewSubscriber(
-			sc,
-			logger,
-		)
 	default:
 		return nil, fromuri.ErrUnsupportedScheme
 	}
