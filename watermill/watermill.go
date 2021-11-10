@@ -2,10 +2,8 @@ package watermill
 
 import (
 	fromuri "github.com/artyomturkin/go-from-uri"
-	"github.com/artyomturkin/go-from-uri/cassandra"
 	kafka2 "github.com/artyomturkin/go-from-uri/kafka"
 	"github.com/artyomturkin/go-from-uri/sql"
-	"github.com/qairjar/watermill-scylla-plugin"
 	"net/url"
 
 	"github.com/ThreeDotsLabs/watermill"
@@ -32,18 +30,6 @@ func NewPublisher(connection string, logger watermill.LoggerAdapter) (message.Pu
 		if err != nil {
 			return nil, err
 		}
-	case "scylla":
-		db, err := cassandra.NewScyllaConfig(connection)
-		if err != nil {
-			return nil, err
-		}
-		p := &scyllaplugin.Publisher{
-			DB: db,
-		}
-		pub, err = p.NewPublisher(nil, logger)
-		if err != nil {
-			return nil, err
-		}
 	case "elastic":
 		elasticPub := &elasticplugin.Publisher{ElasticURL: connection}
 		pub, err = elasticPub.NewPublisher(nil, logger)
@@ -52,6 +38,9 @@ func NewPublisher(connection string, logger watermill.LoggerAdapter) (message.Pu
 		}
 	case "kafka", "kafkas":
 		pub,err = kafka2.NewWatermillPublisher(connection,logger)
+		if err != nil {
+			return nil, err
+		}
 	default:
 		return nil, fromuri.ErrUnsupportedScheme
 	}
@@ -74,18 +63,6 @@ func NewSubscriber(connection string, logger watermill.LoggerAdapter) (message.S
 			return nil, err
 		}
 		sub := sqlplugin.Subscriber{DB: db}
-		c, err = sub.NewSubscriber(nil, logger)
-		if err != nil {
-			return nil, err
-		}
-	case "scylla":
-		db, err := cassandra.NewScyllaConfig(connection)
-		if err != nil {
-			return nil, err
-		}
-		sub := &scyllaplugin.Subscriber{
-			DB: db,
-		}
 		c, err = sub.NewSubscriber(nil, logger)
 		if err != nil {
 			return nil, err
