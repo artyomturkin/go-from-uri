@@ -8,23 +8,25 @@ import (
 
 var driverMap map[string]string
 
-func init(){
+func init() {
 	driverMap = make(map[string]string)
 	driverMap["mysql"] = "sql"
 	driverMap["oracle"] = "godror"
 	driverMap["postgres"] = "postgres"
 }
 
-func Open(connection string) (*dbSql.DB, error) {
+func Open(connection string) (string, *dbSql.DB, error) {
 	u, err := url.Parse(connection)
 	if err != nil {
-		return nil, err
+		return "", nil, err
 	}
-	driver,ok := driverMap[u.Scheme]
+	driver, ok := driverMap[u.Scheme]
 
 	if !ok {
-		return nil, errors.New("schema does not exist")
+		return "", nil, errors.New("schema does not exist")
 	}
 	dbURL := u.String()
-	return dbSql.Open(driver, dbURL)
+	path := u.Query().Get("sql-path")
+	db, err := dbSql.Open(driver, dbURL)
+	return path, db, err
 }

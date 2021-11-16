@@ -1,9 +1,10 @@
 package watermill
 
 import (
+	"database/sql"
 	fromuri "github.com/artyomturkin/go-from-uri"
 	kafka2 "github.com/artyomturkin/go-from-uri/kafka"
-	"github.com/artyomturkin/go-from-uri/sql"
+	sqlUri "github.com/artyomturkin/go-from-uri/sql"
 	"net/url"
 
 	"github.com/ThreeDotsLabs/watermill"
@@ -21,7 +22,7 @@ func NewPublisher(connection string, logger watermill.LoggerAdapter) (message.Pu
 	var pub message.Publisher
 	switch u.Scheme {
 	case "mysql", "oracle", "postgres":
-		db, err := sql.Open(connection)
+		_, db, err := sqlUri.Open(connection)
 		if err != nil {
 			return nil, err
 		}
@@ -37,7 +38,7 @@ func NewPublisher(connection string, logger watermill.LoggerAdapter) (message.Pu
 			return nil, err
 		}
 	case "kafka", "kafkas":
-		pub,err = kafka2.NewWatermillPublisher(connection,logger)
+		pub, err = kafka2.NewWatermillPublisher(connection, logger)
 		if err != nil {
 			return nil, err
 		}
@@ -58,18 +59,18 @@ func NewSubscriber(connection string, logger watermill.LoggerAdapter) (message.S
 	var c message.Subscriber
 	switch u.Scheme {
 	case "mysql", "oracle", "postgres":
-		db, err := sql.Open(connection)
+		path, db, err := sqlUri.Open(connection)
 		if err != nil {
 			return nil, err
 		}
-		sub := sqlplugin.Subscriber{DB: db}
+		sub := sqlplugin.Subscriber{DB: db, SelectPath: path}
 		c, err = sub.NewSubscriber(nil, logger)
 		if err != nil {
 			return nil, err
 		}
 	case "elastic":
 	case "kafka", "kafkas":
-		c,err = kafka2.NewWatermillSubscriber(connection, logger)
+		c, err = kafka2.NewWatermillSubscriber(connection, logger)
 		if err != nil {
 			return nil, err
 		}
