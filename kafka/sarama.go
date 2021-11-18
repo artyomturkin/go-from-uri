@@ -4,9 +4,10 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/Shopify/sarama"
-	"github.com/artyomturkin/go-from-uri"
+	fromuri "github.com/artyomturkin/go-from-uri"
 )
 
 // NewSaramaConfig build new sarama config from URL string.
@@ -36,6 +37,9 @@ func NewSaramaConfig(connectionURL string) ([]string, *sarama.Config, error) {
 	conf.Producer.Return.Successes = true
 	conf.Consumer.Return.Errors = true
 	conf.Producer.RequiredAcks = sarama.WaitForAll
+	conf.Consumer.Group.Session.Timeout = 20 * time.Second
+	conf.Consumer.Group.Heartbeat.Interval = 6 * time.Second
+	conf.Consumer.MaxProcessingTime = 500 * time.Millisecond
 
 	switch s := u.Query().Get("offset"); s {
 	case "oldest":
