@@ -54,5 +54,7 @@ func NewSubscriber(connection string, logger watermill.LoggerAdapter) (message.S
 		return nil, fromuri.ErrUnsupportedScheme
 	}
 
+
+
 	return c, err
 }
