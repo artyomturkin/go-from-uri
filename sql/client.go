@@ -34,33 +34,27 @@ func Open(connection string) (*stdSQL.DB, error) {
 		return nil, errors.New("schema does not exist")
 	}
 	dbURL := u.String()
-	db, err := stdSQL.Open(driver, dbURL)
+	db, err := stdSQL.Connect(driver, dbURL)
 	return db, err
 }
 
-func getSelect(connection string) (string, error) {
-	u, err := url.Parse(connection)
-	if err != nil {
-		return "", nil
-	}
+func getSelect(queryURI *url.Values) (string, error) {
 	var selectQuery string
-	if len(u.Query().Get("select-path")) > 0 {
-		file, err := ioutil.ReadFile(u.Query().Get("select-path"))
+	if len(queryURI.Get("select-path")) > 0 {
+		file, err := ioutil.ReadFile(queryURI.Get("select-path"))
 		if err != nil {
 			return "", nil
 		}
 		selectQuery = string(file)
 	}
+	queryURI.Del("select-path")
+
 	return selectQuery, nil
 }
 
-func initWindow(connection string) (plugin.Window, error) {
+func initWindow(queryURI *url.Values) (plugin.Window, error) {
 	var window plugin.Window
-	uri, err := url.Parse(connection)
-	if err != nil {
-		return window, err
-	}
-	queryURI := uri.Query()
+	var err error
 	if len(queryURI.Get("init-from")) > 0 {
 		window.InitFrom, err = time.Parse(time.RFC3339, queryURI.Get("init-from"))
 		if err != nil {
@@ -80,14 +74,8 @@ func initWindow(connection string) (plugin.Window, error) {
 	return window, err
 }
 
-func initKafka(connection string) (*kafkadeduplication.SaramaConfig, error) {
-
-	uri, err := url.Parse(connection)
-	if err != nil {
-		return nil, err
-	}
+func initKafka(queryURI *url.Values) (*kafkadeduplication.SaramaConfig, error) {
 	s := &kafkadeduplication.SaramaConfig{}
-	queryURI := uri.Query()
 	if len(queryURI.Get("kafka-brokers")) > 0 {
 		s.Brokers = queryURI.Get("kafka-brokers")
 	}
@@ -99,6 +87,7 @@ func initKafka(connection string) (*kafkadeduplication.SaramaConfig, error) {
 	queryURI.Del("topic-name")
 
 	if len(queryURI.Get("kafka-size")) > 0 {
+		var err error
 		s.Size, err = strconv.Atoi(queryURI.Get("kafka-size"))
 		if err != nil {
 			return s, err
@@ -110,24 +99,29 @@ func initKafka(connection string) (*kafkadeduplication.SaramaConfig, error) {
 }
 
 func NewSubscriber(connection string, logger watermill.LoggerAdapter) (message.Subscriber, error) {
+	uri, err := url.Parse(connection)
+	if err != nil {
+		return nil, err
+	}
+	queryURI := uri.Query()
+	selectQuery, err := getSelect(&queryURI)
+	if err != nil {
+		return nil, err
+	}
+	window, err := initWindow(&queryURI)
+	if err != nil {
+		return nil, err
+	}
+	saramaConfig, err := initKafka(&queryURI)
+	if err != nil {
+		return nil, err
+	}
+	uri.RawQuery = queryURI.Encode()
+	connection = uri.String()
 	db, err := Open(connection)
-	if err != nil {
-		return nil, err
-	}
-	selectQuery, err := getSelect(connection)
-	window, err := initWindow(connection)
-	if err != nil {
-		return nil, err
-	}
-	saramaConfig, err := initKafka(connection)
 	if err != nil {
 		return nil, err
 	}
 	sub := plugin.Subscriber{DB: db, SelectQuery: selectQuery, Window: window}
 	return sub.NewSubscriber(nil, logger, saramaConfig)
-}
-
-func NewPublisher(connection string, logger watermill.LoggerAdapter) (message.Publisher, error) {
-	p := &plugin.Publisher{}
-	return p.NewPublisher(nil, logger)
 }
