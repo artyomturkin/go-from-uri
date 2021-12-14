@@ -6,14 +6,12 @@ import (
 	"github.com/ThreeDotsLabs/watermill/message"
 	stdSQL "github.com/jmoiron/sqlx"
 	kafkadeduplication "github.com/qairjar/kafka-deduplication"
+	plugin "github.com/qairjar/watermill-sql-plugin"
 	"io/ioutil"
+	"net/url"
 	"strconv"
 	"time"
-
-	plugin "github.com/qairjar/watermill-sql-plugin"
-	"net/url"
 )
-
 var driverMap map[string]string
 
 func init() {
@@ -38,16 +36,16 @@ func Open(connection string) (*stdSQL.DB, error) {
 	return db, err
 }
 
-func getSelect(queryURI *url.Values) (string, error) {
+func getQuery(queryName string, queryURI *url.Values) (string, error) {
 	var selectQuery string
-	if len(queryURI.Get("select-path")) > 0 {
-		file, err := ioutil.ReadFile(queryURI.Get("select-path"))
+	if len(queryURI.Get(queryName)) > 0 {
+		file, err := ioutil.ReadFile(queryURI.Get(queryName))
 		if err != nil {
 			return "", nil
 		}
 		selectQuery = string(file)
 	}
-	queryURI.Del("select-path")
+	queryURI.Del(queryName)
 
 	return selectQuery, nil
 }
@@ -104,7 +102,7 @@ func NewSubscriber(connection string, logger watermill.LoggerAdapter) (message.S
 		return nil, err
 	}
 	queryURI := uri.Query()
-	selectQuery, err := getSelect(&queryURI)
+	selectQuery, err := getQuery("select-path", &queryURI)
 	if err != nil {
 		return nil, err
 	}
@@ -124,4 +122,28 @@ func NewSubscriber(connection string, logger watermill.LoggerAdapter) (message.S
 	}
 	sub := plugin.Subscriber{DB: db, SelectQuery: selectQuery, Window: window}
 	return sub.NewSubscriber(nil, logger, saramaConfig)
+}
+
+func NewPublisher(connection string, logger watermill.LoggerAdapter) (message.Publisher, error) {
+	uri, err := url.Parse(connection)
+	if err != nil {
+		return nil, err
+	}
+	queryURI := uri.Query()
+	selectQuery, err := getQuery("select-path", &queryURI)
+	if err != nil {
+		return nil, err
+	}
+	insertQuery, err := getQuery("insert-path", &queryURI)
+	if err != nil {
+		return nil, err
+	}
+	uri.RawQuery = queryURI.Encode()
+	connection = uri.String()
+	db, err := Open(connection)
+	if err != nil {
+		return nil, err
+	}
+	p := &plugin.Publisher{DB: db, Select: selectQuery, Query: insertQuery}
+	return p.NewPublisher(nil, logger)
 }
